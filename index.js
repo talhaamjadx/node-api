@@ -1,8 +1,6 @@
 require("dotenv").config()
 const express = require("express")
 
-const { Server } = require("socket.io");
-
 const bodyParser = require("body-parser")
 
 const apiRouter = require("./routes/api/posts");
@@ -63,7 +61,8 @@ app.use('/api/users', userRouter)
 mongoose.connect(process.env.MONGO_DB_KEY)
     .then(() => {
         const server = app.listen(process.env.PORT, () => console.log("server is running on port " + process.env.PORT))
-        const io = new Server(server);
+        require("./socket.js").init(server)
+        const io = require("./socket.js").getIo()
         io.on("connection", socket => {
             console.log("Socket is connected")
         })

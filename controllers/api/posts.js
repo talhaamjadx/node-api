@@ -119,6 +119,7 @@ exports.createPosts = (req, res, next) => {
                 status: 201,
                 message: "Post Created"
             })
+            require("../../socket").getIo().emit("name", { name: "talha" })
             return User.findOne({ _id: req.userId })
         })
         .then(user => {
