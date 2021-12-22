@@ -1,6 +1,8 @@
 require("dotenv").config()
 const express = require("express")
 
+const { Server } = require("socket.io");
+
 const bodyParser = require("body-parser")
 
 const apiRouter = require("./routes/api/posts");
@@ -31,11 +33,17 @@ const fileFilter = (req, file, callback) => {
 
 const mongoose = require("mongoose");
 
+app.set("views", "views")
+
+app.set("view engine", "ejs")
+
 app.use(bodyParser.json())
 
 app.use(multer({ storage: fileStorage, fileFilter: fileFilter }).single("image"))
 
 app.use("/images", express.static(path.join(__dirname, "images")))
+
+app.use(express.static(path.join(__dirname, "public")))
 
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*")
@@ -44,13 +52,21 @@ app.use((req, res, next) => {
     next()
 })
 
+app.get("/home", (req, res, next) => {
+    res.render("index")
+})
+
 app.use('/api', apiRouter)
 
 app.use('/api/users', userRouter)
 
 mongoose.connect(process.env.MONGO_DB_KEY)
     .then(() => {
-        app.listen(process.env.PORT, () => console.log("server is running on port " + process.env.PORT))
+        const server = app.listen(process.env.PORT, () => console.log("server is running on port " + process.env.PORT))
+        const io = new Server(server);
+        io.on("connection", socket => {
+            console.log("Socket is connected")
+        })
     })
     .catch(err => {
         console.log(err)
