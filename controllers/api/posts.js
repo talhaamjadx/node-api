@@ -1,9 +1,11 @@
 const { validationResult } = require("express-validator")
 const Post = require("../../models/post");
+const User = require("../../models/user");
 const fs = require("fs");
 
 exports.getPosts = (req, res, next) => {
-    Post.find()
+    Post.find({ createdBy: req.userId })
+    .populate("createdBy")
         .then(posts => {
             res.status(200).json({
                 success: true,
@@ -24,7 +26,7 @@ exports.updatePost = (req, res, next) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() })
     }
-    Post.findById(req.params.id)
+    Post.findOne({ _id: req.params.id, createdBy: req.userId})
         .then(post => {
             if (!post) {
                 throw new Error("Post not found")
@@ -52,16 +54,23 @@ exports.updatePost = (req, res, next) => {
 }
 
 exports.deletePost = (req, res, next) => {
-    Post.findById(req.params.id)
+    let postId = null
+    Post.findOne({ _id: req.params.id, createdBy: req.userId})
         .then(post => {
+            postId = post._id
             removeImage(post.imageUrl)
             return Post.findByIdAndDelete(post._id)
         })
-        .then(post => {
+        .then(() => {
             res.status(200).json({
                 success: true,
                 message: "deleted",
             })
+            return User.findOne({_id: req.userId})
+        })
+        .then(user => {
+            user.posts.pull(postId)
+            return user.save()
         })
         .catch(err => {
             res.status(500).json({
@@ -72,7 +81,8 @@ exports.deletePost = (req, res, next) => {
 }
 
 exports.postById = (req, res, next) => {
-    Post.findById(req.params.id)
+    Post.findOne({ _id: req.params.id, createdBy: req.userId})
+    .populate("createdBy")
         .then(post => {
             res.status(200).json({
                 success: true,
@@ -100,7 +110,8 @@ exports.createPosts = (req, res, next) => {
     }
     const post = new Post({
         title: req.body.title,
-        imageUrl: req.file.path
+        imageUrl: req.file.path,
+        createdBy: req.userId
     })
     post.save()
         .then(() => {
@@ -108,6 +119,11 @@ exports.createPosts = (req, res, next) => {
                 status: 201,
                 message: "Post Created"
             })
+            return User.findOne({ _id: req.userId })
+        })
+        .then(user => {
+            user.posts.push(post)
+            return user.save()
         })
         .catch(err => {
             res.status(500).json({
