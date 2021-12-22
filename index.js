@@ -9,6 +9,8 @@ const multer = require("multer")
 
 const path = require("path");
 
+const userRouter = require("./routes/api/users");
+
 const app = express();
 
 const fileStorage = multer.diskStorage({
@@ -43,6 +45,8 @@ app.use((req, res, next) => {
 })
 
 app.use('/api', apiRouter)
+
+app.use('/api/users', userRouter)
 
 mongoose.connect(process.env.MONGO_DB_KEY)
     .then(() => {
